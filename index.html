@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Practical-machine-learning : Course Project">
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Practical-machine-learning</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/JohnFlanagan/Practical-Machine-Learning">View on GitHub</a>
+
+          <h1 id="project_title">Practical-machine-learning</h1>
+          <h2 id="project_tagline">Course Project</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/JohnFlanagan/Practical-Machine-Learning/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/JohnFlanagan/Practical-Machine-Learning/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <hr>
+
+<p>title: "PracticalMachineLearning"
+author: "JFlanagan"
+date: "Saturday, October 25, 2014"</p>
+
+<h2>
+<a name="output-html_document" class="anchor" href="#output-html_document"><span class="octicon octicon-link"></span></a>output: html_document</h2>
+
+<h2>
+<a name="practical-machine-learning-from-wwwcourseraorg" class="anchor" href="#practical-machine-learning-from-wwwcourseraorg"><span class="octicon octicon-link"></span></a>Practical Machine Learning from <a href="http://www.coursera.org">www.coursera.org</a>
+</h2>
+
+<h3>
+<a name="course-project" class="anchor" href="#course-project"><span class="octicon octicon-link"></span></a>Course Project</h3>
+
+<p>The objective of this project is to develop a predictive model to predict the quality of barbell lifts using  data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants, who were requested to perform barbell lifts correctly and incorrectly in 5 different ways. </p>
+
+<p>The steps undertaken in this project were:</p>
+
+<ol>
+<li>Import training data</li>
+<li>Tidy data (removal of NAs and non-predictive information)</li>
+<li>Split data 70/30 for the purposes of model building and cross-validation</li>
+<li>Apply different predictive models and assess accuracy based on "Out of Sample Error"</li>
+<li>Import test data and tidy in the same manner as the training data</li>
+<li>Apply predictive model which gave best results in step 4.</li>
+</ol>
+
+<h3>
+<a name="step-1-import-training-data" class="anchor" href="#step-1-import-training-data"><span class="octicon octicon-link"></span></a>Step 1. Import training data</h3>
+
+<pre lang="r,"><code>trainingraw &lt;- read.csv("C:/Users/mikoflan/Documents/PredMachLearning/pml-training.csv", 
+                          na.strings= c("NA",""," "))
+</code></pre>
+
+<h3>
+<a name="step-2-tidy-data-removal-of-nas-and-non-predictive-information" class="anchor" href="#step-2-tidy-data-removal-of-nas-and-non-predictive-information"><span class="octicon octicon-link"></span></a>Step 2. Tidy data (removal of NAs and non-predictive information)</h3>
+
+<p>First, I computed the number of missing values per column of data. Then I investigated the occurence of NAs; the results showed that columns either contained &gt;15,000 NAs or no NAs. In a dataset with 19,622 observations, I decided that if there were in excess of 15,000 NAs, these columns added little predictive power to the model chosen.</p>
+
+<pre lang="r,"><code>dim(trainingraw)
+trainingrawNA &lt;- apply(trainingraw, 2, function(x) sum(is.na(x)))
+
+sum(trainingrawNA &gt; 10)
+sum(trainingrawNA &gt; 15000)
+sum(trainingrawNA &gt; 0) ## therefore can remove all cols with any NA (if one NA, then &gt; 10000 NAs)
+
+training &lt;- trainingraw[,which(trainingrawNA &lt; 1)]
+
+ncoltraining &lt;- ncol(training)
+training &lt;- training[,8:ncoltraining] ##remove non-predictive information in 1st 8 columns
+table(training$classe) ## get overview of outcome
+</code></pre>
+
+<h3>
+<a name="step-3-split-data-7030-for-the-purposes-of-model-building-and-cross-validation" class="anchor" href="#step-3-split-data-7030-for-the-purposes-of-model-building-and-cross-validation"><span class="octicon octicon-link"></span></a>Step 3. Split data 70/30 for the purposes of model building and cross-validation</h3>
+
+<pre lang="r,"><code>library(caret)
+inTrain &lt;- createDataPartition(y = training$classe, p = 0.7, list = FALSE)
+train &lt;- training[inTrain, ]
+crossval &lt;- training[-inTrain, ]
+
+library(corrplot)
+train2 &lt;- train[,-53]
+M &lt;- cor(train2)
+corrplot(M, type="lower", order="hclust") ## visualize potential correlations
+</code></pre>
+
+<h3>
+<a name="step-4-apply-different-predictive-models-and-assess-accuracy-based-on-out-of-sample-error" class="anchor" href="#step-4-apply-different-predictive-models-and-assess-accuracy-based-on-out-of-sample-error"><span class="octicon octicon-link"></span></a>Step 4. Apply different predictive models and assess accuracy based on "Out of Sample Error"</h3>
+
+<p>I would like to Out of Sample Error rate of less than 5 %.</p>
+
+<p>4a. Linear Discriminant Analysis</p>
+
+<pre lang="r,"><code>modlda &lt;- train(classe ~ ., data=train, method = "lda")
+plda &lt;- predict(modlda, crossval)
+confusionMatrix(crossval$classe, plda) ## 70.28% accuracy
+OOSE.acc.lda &lt;- sum(plda == crossval$classe)/length(plda)
+OOSE.lda &lt;- round(((1-OOSE.acc.lda)*100), digits=2)
+</code></pre>
+
+<p>The Out of Sample Error using Linear Discriminant Analysis was estimated to be <code>r OOSE.lda</code>%.</p>
+
+<p>4b. Classification tree</p>
+
+<pre lang="r,"><code>library(rpart)
+modrpart &lt;- train(classe ~., method="rpart", data=train)
+predrpart &lt;- predict(modrpart, crossval)
+confusionMatrix(crossval$classe, predrpart) ##49% accuracy
+OOSE.acc.rpart &lt;- sum(predrpart == crossval$classe)/length(predrpart)
+OOSE.rpart &lt;- round(((1-OOSE.acc.rpart)*100), digits=2)
+</code></pre>
+
+<p>The Out of Sample Error using the Classification tree method was estimated to be <code>r OOSE.rpart</code>%.</p>
+
+<p>4c. Random Forest</p>
+
+<pre lang="r,"><code>library(randomForest)
+model &lt;- randomForest(classe ~ ., data = train)
+predCrossVal &lt;- predict(model, crossval)
+confusionMatrix(crossval$classe, predCrossVal) ## 99.4% accuracy
+OOSE.acc.rf &lt;- sum(predCrossVal == crossval$classe)/length(predCrossVal)
+OOSE.rf &lt;- round(((1-OOSE.acc.rf)*100), digits=2)
+</code></pre>
+
+<p>The Out of Sample Error using the Random Forest method was estimated to be <code>r OOSE.rf</code>%.</p>
+
+<p>As this was by far the most accurate of the 3 methods tested, and below the desired level of 5 %, I decided to use this model for the test data.</p>
+
+<h3>
+<a name="step-5-import-test-data-and-tidy-in-the-same-manner-as-the-training-data" class="anchor" href="#step-5-import-test-data-and-tidy-in-the-same-manner-as-the-training-data"><span class="octicon octicon-link"></span></a>Step 5. Import test data and tidy in the same manner as the training data</h3>
+
+<pre lang="r,"><code>testingraw &lt;- read.csv("C:/Users/mikoflan/Documents/PredMachLearning/pml-testing.csv", 
+                       na.strings= c("NA",""," "))
+testingrawNA &lt;- apply(testingraw, 2, function(x) sum(is.na(x)))
+
+sum(testingrawNA &gt; 10)
+sum(testingrawNA &gt; 15000)
+sum(testingrawNA &gt; 0) ## therefore can remove all cols with any NA (if one NA, then &gt; 15000 NAs)
+
+testing &lt;- testingraw[,which(testingrawNA &lt; 1)]
+
+ncoltesting &lt;- ncol(testing)
+testing &lt;- testing[,8:ncoltesting] ##remove non-predictive information in 1st 8 columns
+</code></pre>
+
+<h3>
+<a name="step-6-apply-predictive-model-which-gave-best-results-in-step-4" class="anchor" href="#step-6-apply-predictive-model-which-gave-best-results-in-step-4"><span class="octicon octicon-link"></span></a>Step 6. Apply predictive model which gave best results in step 4.</h3>
+
+<pre lang="r,"><code>predicttesting &lt;- predict(model, testing)
+</code></pre>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Practical-machine-learning maintained by <a href="https://github.com/JohnFlanagan">JohnFlanagan</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
